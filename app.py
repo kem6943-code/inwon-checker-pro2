@@ -118,13 +118,10 @@ def main():
     target_month_days = st.sidebar.number_input("📅 이번 달 총 일수 (Month Days)", min_value=28, max_value=31, value=30)
     
     st.sidebar.divider()
-    st.sidebar.header("🇻🇳 OS(아웃소싱) 공수 입력")
-    st.sidebar.info("개별 관리가 힘든 OS 인원은 '총 투입 공수'로 계산합니다.")
-    os_dj1_days = st.sidebar.number_input("DJ1 OS 총 공수 (Man-Days)", min_value=0, value=3000, step=10)
-    os_dj2_days = st.sidebar.number_input("DJ2 OS 총 공수 (Man-Days)", min_value=0, value=4500, step=10)
-    
-    os_dj1_fte = os_dj1_days / target_month_days
-    os_dj2_fte = os_dj2_days / target_month_days
+    st.sidebar.header("🇻🇳 OS(아웃소싱) 인원 입력")
+    st.sidebar.info("개별 관리가 힘든 OS 인원은 '총 투입 인원'으로 계산합니다.")
+    os_dj1_fte = st.sidebar.number_input("DJ1 OS 인원 (명)", min_value=0.0, value=100.0, step=0.5, format="%.1f")
+    os_dj2_fte = st.sidebar.number_input("DJ2 OS 인원 (명)", min_value=0.0, value=150.0, step=0.5, format="%.1f")
 
     st.sidebar.divider()
     st.sidebar.header("📁 데이터 소스")
