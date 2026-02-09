@@ -71,10 +71,6 @@ def parse_dmr_sheet(df):
         try:
             major_clean = raw_major.split('(')[0].strip()
             
-            # Debug: Log Ball Coating data
-            if "BALL" in major_clean.upper() or "COATING" in major_clean.upper():
-                print(f"DEBUG [Ball Coating]: Major={major_clean}, Detail={detail}, Position={row[2]}, TO={row[7]}")
-            
             parsed_rows.append({
                 "Major Team": major_clean,
                 "Team": detail.replace('\n', ' ').strip(),
@@ -88,8 +84,28 @@ def parse_dmr_sheet(df):
                 "Total_Actual": float(row[10]) if pd.notnull(row[10]) else 0
             })
         except: continue
+    
+    result_df = pd.DataFrame(parsed_rows)
+    
+    # CRITICAL FIX: Remove duplicates and filter anomalies
+    if not result_df.empty:
+        # 1. Remove exact duplicates
+        result_df = result_df.drop_duplicates()
+        
+        # 2. Group by Major Team + Team + Position and sum (in case of legitimate splits)
+        result_df = result_df.groupby(['Major Team', 'Team', 'Position', 'Type'], as_index=False).agg({
+            'DJ1_TO': 'sum',
+            'DJ2_TO': 'sum', 
+            'Total_TO': 'sum',
+            'DJ1_Actual': 'sum',
+            'DJ2_Actual': 'sum',
+            'Total_Actual': 'sum'
+        })
+        
+        # 3. Filter out anomalous rows (T/O > 50 per position is suspicious)
+        result_df = result_df[result_df['Total_TO'] <= 50]
             
-    return pd.DataFrame(parsed_rows), None
+    return result_df, None
 
 # --- Logic: Cost Parser (For Sheet 2025) ---
 def parse_cost_sheet(df):
