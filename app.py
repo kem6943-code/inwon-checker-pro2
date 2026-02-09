@@ -120,8 +120,8 @@ def main():
     st.sidebar.divider()
     st.sidebar.header("🇻🇳 OS(아웃소싱) 인원 입력")
     st.sidebar.info("개별 관리가 힘든 OS 인원은 '총 투입 인원'으로 계산합니다.")
-    os_dj1_fte = st.sidebar.number_input("DJ1 OS 인원 (명)", min_value=0.0, value=100.0, step=0.5, format="%.1f")
-    os_dj2_fte = st.sidebar.number_input("DJ2 OS 인원 (명)", min_value=0.0, value=150.0, step=0.5, format="%.1f")
+    os_dj1_fte = st.sidebar.number_input("DJ1 OS 인원 (명)", min_value=0.0, value=100.0, step=1.0, format="%.1f")
+    os_dj2_fte = st.sidebar.number_input("DJ2 OS 인원 (명)", min_value=0.0, value=150.0, step=1.0, format="%.1f")
 
     st.sidebar.divider()
     st.sidebar.header("📁 데이터 소스")
