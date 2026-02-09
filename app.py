@@ -279,6 +279,47 @@ def main():
                     mime="text/html",
                     key=f"html_download_{tab_id}"
                 )
+            
+            # PDF Report Download
+            with col_e3:
+                from reportlab.lib.pagesizes import A4
+                from reportlab.pdfgen import canvas
+                from reportlab.lib.units import cm
+                
+                pdf_buffer = BytesIO()
+                c = canvas.Canvas(pdf_buffer, pagesize=A4)
+                width, height = A4
+                
+                # Title
+                c.setFont("Helvetica-Bold", 16)
+                c.drawString(2*cm, height - 2*cm, f"Inwon-Checker Report - {datetime.now().strftime('%Y-%m-%d')}")
+                
+                # Summary
+                c.setFont("Helvetica", 12)
+                y = height - 4*cm
+                c.drawString(2*cm, y, f"Entity: {prefix}")
+                y -= 0.7*cm
+                c.drawString(2*cm, y, f"Total T/O: {int(t_to)}")
+                y -= 0.7*cm
+                c.drawString(2*cm, y, f"Total Nominal: {int(t_act)}")
+                y -= 0.7*cm
+                c.drawString(2*cm, y, f"Total Real FTE: {t_fte:.1f}")
+                y -= 0.7*cm
+                c.drawString(2*cm, y, f"Total Cost: {t_cost/1e6:,.0f}M")
+                y -= 0.7*cm
+                c.drawString(2*cm, y, f"Leakage: {ghost_salary/1e6:,.1f}M")
+                
+                c.showPage()
+                c.save()
+                pdf_buffer.seek(0)
+                
+                st.download_button(
+                    label="📄 PDF 리포트",
+                    data=pdf_buffer,
+                    file_name=f"inwon_report_{datetime.now().strftime('%Y%m%d')}_{prefix}.pdf",
+                    mime="application/pdf",
+                    key=f"pdf_download_{tab_id}"
+                )
 
         with tab1: render_integrated_dashboard(merged_df, "Total", "tab1")
         with tab2: render_integrated_dashboard(merged_df, "DJ1", "tab2")
