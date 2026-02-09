@@ -54,18 +54,27 @@ def parse_dmr_sheet(df):
     current_major_team = ""
     current_detail_team = ""
     
-    for _, row in data_raw.iterrows():
+    for idx, row in data_raw.iterrows():
         raw_major = str(row[0]) if pd.notnull(row[0]) and str(row[0]).strip() != "" else current_major_team
         detail = str(row[1]) if pd.notnull(row[1]) and str(row[1]).strip() != "" else current_detail_team
         
-        if any(x in str(row[2]) for x in ["Total", "S-Total", "합계"]): continue
-        if pd.isnull(row[2]) and pd.isnull(row[5]): continue
+        # Skip Total/Sum rows - ENHANCED
+        position_str = str(row[2]).strip().upper()
+        if any(x in position_str for x in ["TOTAL", "S-TOTAL", "합계", "소계", "SUM"]): 
+            continue
+        if pd.isnull(row[2]) and pd.isnull(row[5]): 
+            continue
             
         current_major_team = raw_major
         current_detail_team = detail
         
         try:
             major_clean = raw_major.split('(')[0].strip()
+            
+            # Debug: Log Ball Coating data
+            if "BALL" in major_clean.upper() or "COATING" in major_clean.upper():
+                print(f"DEBUG [Ball Coating]: Major={major_clean}, Detail={detail}, Position={row[2]}, TO={row[7]}")
+            
             parsed_rows.append({
                 "Major Team": major_clean,
                 "Team": detail.replace('\n', ' ').strip(),
