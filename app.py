@@ -249,23 +249,46 @@ def main():
             
             st.divider()
 
-            # Charts
-            c1, c2 = st.columns(2)
-            with c1:
-                st.subheader("📊 인원 정교화 분석 (T/O vs Nominal vs Real)")
-                team_h = df.groupby('Major Team')[[to_col, act_col, fte_col]].sum().reset_index()
-                fig_h = go.Figure()
-                fig_h.add_trace(go.Bar(name='정원 (T/O)', x=team_h['Major Team'], y=team_h[to_col], marker_color='#bdc3c7'))
-                fig_h.add_trace(go.Bar(name='현원 (Nominal)', x=team_h['Major Team'], y=team_h[act_col], marker_color='#34495e'))
-                fig_h.add_trace(go.Bar(name='실질 인원 (FTE)', x=team_h['Major Team'], y=team_h[fte_col], marker_color='#e74c3c'))
-                fig_h.update_layout(barmode='group', template='plotly_white')
-                st.plotly_chart(fig_h, use_container_width=True)
+            # Charts - IMPROVED READABILITY
+            st.subheader("📊 인원 정교화 분석 (T/O vs Nominal vs Real)")
+            team_h = df.groupby('Major Team')[[to_col, act_col, fte_col]].sum().reset_index()
+            team_h = team_h.sort_values(by=to_col, ascending=False)  # Sort by T/O
             
-            with c2:
-                st.subheader("🧩 부서별 인건비 비중")
-                cost_summary = df[['Mapped_Dept', cost_col]].drop_duplicates()
-                fig_c = px.pie(cost_summary, values=cost_col, names='Mapped_Dept', hole=0.4)
-                st.plotly_chart(fig_c, use_container_width=True)
+            fig_h = go.Figure()
+            fig_h.add_trace(go.Bar(name='정원 (T/O)', x=team_h['Major Team'], y=team_h[to_col], marker_color='#95a5a6'))
+            fig_h.add_trace(go.Bar(name='현원 (Nominal)', x=team_h['Major Team'], y=team_h[act_col], marker_color='#3498db'))
+            fig_h.add_trace(go.Bar(name='실질 인원 (FTE)', x=team_h['Major Team'], y=team_h[fte_col], marker_color='#e74c3c'))
+            
+            fig_h.update_layout(
+                barmode='group',
+                template='plotly_white',
+                height=600,  # Much taller!
+                xaxis=dict(
+                    tickangle=-45,
+                    tickfont=dict(size=11),
+                    categoryorder='total descending'
+                ),
+                yaxis=dict(
+                    title='인원 (명)',
+                    tickfont=dict(size=12)
+                ),
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                ),
+                margin=dict(b=120, t=50)  # More bottom margin for labels
+            )
+            st.plotly_chart(fig_h, use_container_width=True)
+            
+            st.divider()
+            st.subheader("🧩 부서별 인건비 비중")
+            cost_summary = df[['Mapped_Dept', cost_col]].drop_duplicates()
+            fig_c = px.pie(cost_summary, values=cost_col, names='Mapped_Dept', hole=0.4)
+            fig_c.update_layout(height=500)
+            st.plotly_chart(fig_c, use_container_width=True)
 
             # Table
             st.subheader("🔍 데이터 상세 매칭 리포트")
