@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 import io
+from io import BytesIO
 
 # --- Page Config ---
 st.set_page_config(
@@ -192,7 +193,7 @@ def main():
         # --- Presentation ---
         tab1, tab2, tab3, tab4 = st.tabs(["🌎 통합 (Total)", "🇰🇷 DJ1 법인", "🇻🇳 DJ2 법인", "🛠️ 매칭 상태 (Debug)"])
 
-        def render_integrated_dashboard(df, prefix="Total"):
+        def render_integrated_dashboard(df, prefix="Total", tab_id="default"):
             to_col = f"{prefix}_TO" if prefix != "Total" else "Total_TO"
             act_col = f"{prefix}_Actual" if prefix != "Total" else "Total_Actual"
             fte_col = f"{prefix}_FTE" if prefix != "Total" else "Real_FTE"
@@ -248,10 +249,24 @@ def main():
             st.subheader("🔍 데이터 상세 매칭 리포트")
             view_df = df.filter(items=['Major Team', 'Team', 'Position', to_col, act_col, fte_col, 'Mapped_Dept', cost_col])
             st.dataframe(view_df.style.format({cost_col: "{:,.0f}", fte_col: "{:.2f}"}), use_container_width=True)
+            
+            # Excel Download
+            st.divider()
+            excel_buffer = BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                view_df.to_excel(writer, sheet_name='분석결과', index=False)
+            excel_buffer.seek(0)
+            st.download_button(
+                label="📥 Excel 다운로드",
+                data=excel_buffer,
+                file_name=f"inwon_analysis_{datetime.now().strftime('%Y%m%d')}_{prefix}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key=f"excel_download_{tab_id}"
+            )
 
-        with tab1: render_integrated_dashboard(merged_df, "Total")
-        with tab2: render_integrated_dashboard(merged_df, "DJ1")
-        with tab3: render_integrated_dashboard(merged_df, "DJ2")
+        with tab1: render_integrated_dashboard(merged_df, "Total", "tab1")
+        with tab2: render_integrated_dashboard(merged_df, "DJ1", "tab2")
+        with tab3: render_integrated_dashboard(merged_df, "DJ2", "tab3")
         with tab4:
             st.subheader("🛠️ 데이터 매칭 점검")
             st.write("DMR 부서명 → 인건비 부서명 매칭 현황입니다.")
