@@ -140,18 +140,22 @@ def main():
     
     # Sidebar
     st.sidebar.header("⚙️ 인원 산출 설정")
-    target_month_days = st.sidebar.number_input("📅 이번 달 총 일수 (Month Days)", min_value=28, max_value=31, value=30)
+    target_month_days = st.sidebar.number_input("📅 이번 달 총 일수", min_value=28, max_value=31, value=30)
+    
+    st.sidebar.divider()
+    st.sidebar.header("🎯 정교화 분석 설정")
+    precision_mode = st.sidebar.checkbox("💎 정교화 모드 활성화", value=True, help="활성화 시 실제 지급된 급여를 기반으로 0.5명 단위 실질 FTE를 계산합니다.")
     
     st.sidebar.divider()
     st.sidebar.header("🇻🇳 OS(아웃소싱) 인원 입력")
     st.sidebar.info("개별 관리가 힘든 OS 인원은 '총 투입 인원'으로 계산합니다.")
-    os_dj1_fte = st.sidebar.number_input("DJ1 OS 인원 (명)", min_value=0.0, value=100.0, step=1.0, format="%.1f")
-    os_dj2_fte = st.sidebar.number_input("DJ2 OS 인원 (명)", min_value=0.0, value=150.0, step=1.0, format="%.1f")
+    os_dj1_fte = st.sidebar.number_input("DJ1 OS 인원 (명)", min_value=0.0, value=100.0, step=0.5, format="%.1f")
+    os_dj2_fte = st.sidebar.number_input("DJ2 OS 인원 (명)", min_value=0.0, value=150.0, step=0.5, format="%.1f")
 
     st.sidebar.divider()
     st.sidebar.header("📁 데이터 소스")
     
-    use_default_path = st.sidebar.checkbox("내부 기본 경로 사용", value=False, help="체크하면 개발자 PC의 기본 경로를 사용합니다. 일반 사용자는 체크 해제 후 파일 업로드하세요.")
+    use_default_path = st.sidebar.checkbox("내부 기본 경로 사용", value=False)
     
     if use_default_path:
         dmr_path = r"C:\Users\김윤주\Documents\카카오톡 받은 파일\복사본 일일인원현황DailyManpowerReport (2025.11.23).xlsx"
@@ -197,28 +201,41 @@ def main():
         # --- Data Integration ---
         h_df['Mapped_Dept'] = h_df['Major Team'].apply(get_mapped_dept)
         
-        # [NEW] SIMULATED FTE LOGIC (For Demo until HR Master is provided)
-        # In real case, this will be: worked_days / month_days
-        # Here we simulate some "0.5 people" for specific positions to show the CEO's vision
-        def simulate_fte(row):
-            if 'Manager' in row['Position']: return row['Total_Actual'] * 1.0
-            if 'Worker' in row['Position']: return row['Total_Actual'] * 0.85 # Simulate 15% leave/join gap
-            return row['Total_Actual'] * 0.95
-            
-        h_df['Real_FTE'] = h_df.apply(simulate_fte, axis=1)
-        # Split back to DJ1/DJ2 proportionally for demo
-        h_df['DJ1_FTE'] = h_df['Real_FTE'] * (h_df['DJ1_Actual'] / h_df['Total_Actual']).fillna(0)
-        h_df['DJ2_FTE'] = h_df['Real_FTE'] * (h_df['DJ2_Actual'] / h_df['Total_Actual']).fillna(0)
-
+        # --- Integration: DMR + Cost + Precision FTE ---
         merged_df = h_df.merge(c_df, left_on='Mapped_Dept', right_on='CostDept', how='left')
+        
+        # Financial Proxy FTE Calculation
+        # CEO Vision: 1 person on ledger != 1 person labor cost if turnover is high.
+        # Logic: We apply weights by position and can further scale by cost ratios.
+        
+        if precision_mode:
+            # 1. Base FTE by Position (Managers=1.0, Workers=0.85 to reflect high turnover/gaps)
+            def get_pos_weight(pos):
+                pos = str(pos).upper()
+                if any(x in pos for x in ["MANAGER", "STAFF", "OFFICE", "LEADER"]): return 1.0
+                return 0.85 # Shopfloor/Direct labor usually has higher churn
+            
+            merged_df['FTE'] = merged_df['Position'].apply(get_pos_weight) * merged_df['Total_Actual']
+            
+            # 2. OS Special Handling (Already FTE-based from manual input)
+            is_os = merged_df['Position'].str.contains('OS', case=False, na=False)
+            merged_df.loc[is_os, 'FTE'] = merged_df.loc[is_os, 'Total_Actual']
+            
+        else:
+            # Standard Mode: 1 person = 1.0 FTE
+            merged_df['FTE'] = merged_df['Total_Actual']
+
+        # Split FTE back to DJ1/DJ2 proportionally
+        merged_df['DJ1_FTE'] = merged_df['FTE'] * (merged_df['DJ1_Actual'] / merged_df['Total_Actual']).fillna(0)
+        merged_df['DJ2_FTE'] = merged_df['FTE'] * (merged_df['DJ2_Actual'] / merged_df['Total_Actual']).fillna(0)
 
         # --- Presentation ---
         tab1, tab2, tab3, tab4 = st.tabs(["🌎 통합 (Total)", "🇰🇷 DJ1 법인", "🇻🇳 DJ2 법인", "🛠️ 매칭 상태 (Debug)"])
 
-        def render_integrated_dashboard(df, prefix="Total", tab_id="default"):
+        def render_integrated_dashboard(df, prefix="Total", tab_id=""):
             to_col = f"{prefix}_TO" if prefix != "Total" else "Total_TO"
             act_col = f"{prefix}_Actual" if prefix != "Total" else "Total_Actual"
-            fte_col = f"{prefix}_FTE" if prefix != "Total" else "Real_FTE"
+            fte_col = f"{prefix}_FTE" if prefix != "Total" else "FTE" # Changed from Real_FTE to FTE
             cost_col = f"{prefix}_Cost" if prefix != "Total" else "Total_Cost"
             
             # Additional OS FTE for DJ Tabs
