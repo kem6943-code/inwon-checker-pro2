@@ -124,30 +124,31 @@ def parse_cost_sheet(df):
     # Default: E=4, F=5, G=6, I=8
     
     for i in range(start_row, min(len(df), start_row + 50)):
-        row = df.iloc[i]
-        dept_name = str(row[0]).strip() if pd.notnull(row[0]) else ""
-        
-        # EXTRA LOOSE CHECK
         try:
-            row_str = " ".join([str(x) for x in row[:5]]) # Define row_str first
-            # Clean numeric string for checking
-            raw_val_8 = str(row[8]).replace(',','').strip() if pd.notnull(row[8]) else "0"
-            if raw_val_8.replace('.','',1).isdigit():
-                val_h = float(raw_val_8)
-            else:
-                val_h = 0
-
-            if val_h > 0 or "STL" in row_str or "기본급" in row_str:
-                cost_data.append({
-                    "CostDept": dept_name,
-                    "DJ1_Cost": float(str(row[4]).replace(',','')) if pd.api.types.is_number(row[4]) or (isinstance(row[4], str) and row[4].replace('.','',1).isdigit()) else 0,
-                    "DJ2_Cost": float(str(row[5]).replace(',','')) if pd.api.types.is_number(row[5]) or (isinstance(row[5], str) and row[5].replace('.','',1).isdigit()) else 0,
-                    "DJ3_Cost": float(str(row[6]).replace(',','')) if pd.api.types.is_number(row[6]) or (isinstance(row[6], str) and row[6].replace('.','',1).isdigit()) else 0,
-                    "Total_Cost": val_h
-                })
-        except Exception as e:
-            # st.error(f"Row {i} error: {e}") # Silent for now
-            continue
+            row = df.iloc[i]
+            dept_name = str(row[0]).strip() if pd.notnull(row[0]) else ""
+            row_str = " ".join([str(x) for x in row.values])
+            
+            if dept_name != "" and not any(x in row_str.upper() for x in ["TOTAL", "합계", "소계", "급여"]):
+                # Search for the first large numeric value in the row as Total Cost
+                nums = []
+                for cell in row[3:]:
+                    try:
+                        c_str = str(cell).replace(',','').strip()
+                        if c_str.replace('.','',1).isdigit():
+                            nums.append(float(c_str))
+                    except: continue
+                
+                if nums:
+                    val_h = max(nums) # Assumption: Largest number is the total/STL
+                    cost_data.append({
+                        "CostDept": dept_name,
+                        "DJ1_Cost": nums[0] if len(nums) > 0 else 0,
+                        "DJ2_Cost": nums[1] if len(nums) > 1 else 0,
+                        "DJ3_Cost": nums[2] if len(nums) > 2 else 0,
+                        "Total_Cost": val_h
+                    })
+        except: continue
 
     df_result = pd.DataFrame(cost_data)
     if df_result.empty:
@@ -397,6 +398,14 @@ def main():
             t_act = df[act_col].sum()
             t_fte = df[fte_col].sum() + os_val
             
+            # --- EMERGENCY DEBUG (Visible on Main Tab) ---
+            if t_fte == 0 or t_act == 0:
+                with st.expander("🚨 데이터가 0으로 나옵니다! (리쫑이의 긴급 진단)", expanded=True):
+                    st.error("DMR 또는 인건비 파일에서 데이터를 읽지 못했습니다.")
+                    st.write("부서 매칭 상태:")
+                    st.dataframe(df[['Major Team', 'Mapped_Dept', fte_col]].drop_duplicates())
+                    st.info("💡 위 표의 FTE 숫자가 모두 0이라면 파싱 실패입니다. [매칭 상태 (Debug)] 탭에서 상세 내용을 확인해주세요!")
+
             gap_fte = t_to - t_fte
             t_cost = df[cost_col].dropna().unique().sum()
             
@@ -449,7 +458,11 @@ def main():
                     st.plotly_chart(fig_c, use_container_width=True)
                 else:
                     st.warning("⚠️ 해당 조건의 인건비 데이터가 없습니다 (합계 0).")
-                    st.info("파일 업로드 시 '인건비 자료'에 해당하는 부서명이 인원현황과 일치하는지 확인해주세요.")
+                    with st.expander("🛠️ 왜 안 나올까요? (매칭 상태 확인)"):
+                        st.write("DMR 부서 vs 인건비 부서 매칭 결과")
+                        debug_df = df[['Major Team', 'Mapped_Dept', cost_col]].drop_duplicates()
+                        st.dataframe(debug_df)
+                        st.write("💡 위 표에서 인건비가 모두 0이라면, 인건비 파일 파싱에 실패한 것입니다.")
 
             # Table
             st.subheader("🔍 데이터 상세 매칭 리포트")
