@@ -198,10 +198,11 @@ def render_master_trend_report(current_df=None, target_month=None, history_files
         "🤝 사내도급 (OS)", "📉 퇴직률", "💸 인당 인건비", "💰 인건비율"
     ]
     
-    # Define Columns (24 months)
+    # Define Columns (2024 - 2026)
     cols_24 = [f"24년 {m}월" for m in range(1, 13)]
     cols_25 = [f"25년 {m}월" for m in range(1, 13)]
-    all_cols = cols_24 + cols_25
+    cols_26 = [f"26년 {m}월" for m in range(1, 13)]
+    all_cols = cols_24 + cols_25 + cols_26
     
     # Session State to "remember" filled data
     if "master_history" not in st.session_state:
@@ -269,11 +270,11 @@ def main():
     # Sidebar
     st.sidebar.header("⚙️ 인원 산출 설정")
     # Date Detection
-    current_year = 2025 # Default
-    current_month = 2 # Default
+    current_year = 2026 # Updated for 2026
+    current_month = datetime.now().month
     
     st.sidebar.markdown("### 📅 보고서 월 지정")
-    report_year = st.sidebar.selectbox("연도", [2024, 2025], index=1)
+    report_year = st.sidebar.selectbox("연도", [2024, 2025, 2026], index=2)
     report_month_num = st.sidebar.selectbox("월", list(range(1, 13)), index=datetime.now().month - 1)
     target_month_label = f"{str(report_year)[2:]}년 {report_month_num}월"
     
