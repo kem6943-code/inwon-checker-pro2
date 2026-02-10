@@ -115,7 +115,8 @@ def parse_cost_sheet(df):
     """
     start_row = 100
     for idx, row in df.iterrows():
-        if any("급여" in str(cell) and "현황" in str(cell) for cell in row[:3]):
+        row_str_top = "".join([str(cell) for cell in row[:5]]).replace(" ", "")
+        if "급여현황" in row_str_top: # Catch '급여 현황', '급여현황' etc.
             start_row = idx + 1
             break
             
@@ -400,12 +401,13 @@ def main():
             t_fte = df[fte_col].sum() + os_val
             
             # --- EMERGENCY DEBUG (Visible on Main Tab) ---
-            if t_fte == 0 or t_act == 0:
-                with st.expander("🚨 데이터가 0으로 나옵니다! (리쫑이의 긴급 진단)", expanded=True):
-                    st.error("DMR 또는 인건비 파일에서 데이터를 읽지 못했습니다.")
-                    st.write("부서 매칭 상태:")
-                    st.dataframe(df[['Major Team', 'Mapped_Dept', fte_col]].drop_duplicates())
-                    st.info("💡 위 표의 FTE 숫자가 모두 0이라면 파싱 실패입니다. [매칭 상태 (Debug)] 탭에서 상세 내용을 확인해주세요!")
+            if t_fte == 0 or t_act == 0 or t_cost == 0:
+                with st.expander("🚨 데이터 연동 주의! (인건비가 0입니다)", expanded=(t_cost == 0)):
+                    st.error("DMR 혹은 인건비 파싱에 문제가 있을 수 있습니다.")
+                    st.write("1. 인건비 파일에 '급여 현황' 표가 있는지 확인해주세요.")
+                    st.write("2. 부서명이 DMR과 일치하는지 확인 (아래 표 참조):")
+                    debug_df = df[['Major Team', 'Mapped_Dept', cost_col]].drop_duplicates()
+                    st.dataframe(debug_df)
 
             gap_fte = t_to - t_fte
             t_cost = df[cost_col].dropna().unique().sum()
