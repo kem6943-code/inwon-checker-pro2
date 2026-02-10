@@ -37,7 +37,7 @@ def get_mapped_dept(major_name):
     if 'QC' in m or '품질' in m: return '품질(현)'
     if 'INJECTION' in m or '사출' in m: return 'Injection+금형'
     if 'MOLD' in m or '금형' in m: return 'Injection+금형'
-    return None
+    return major_name # Fallback to original name instead of None
 
 # --- Logic: DMR Parser (For Sheet 1123) ---
 def parse_dmr_sheet(df):
@@ -138,8 +138,10 @@ def parse_cost_sheet(df):
             })
     df_result = pd.DataFrame(cost_data)
     if df_result.empty:
-        # Return a shell with correct column names to prevent merge KeyErrors
         return pd.DataFrame(columns=["CostDept", "DJ1_Cost", "DJ2_Cost", "DJ3_Cost", "Total_Cost"])
+        
+    # Aggregate by CostDept to handle duplicates in cost sheet
+    df_result = df_result.groupby('CostDept', as_index=False).sum()
     return df_result
 
 def render_master_trend_report():
