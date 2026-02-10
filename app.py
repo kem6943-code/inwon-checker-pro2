@@ -133,6 +133,49 @@ def parse_cost_sheet(df):
             })
     return pd.DataFrame(cost_data)
 
+def render_master_trend_report():
+    st.subheader("📊 24개월 경영 마스터 리포트 (Preview)")
+    st.info("💡 각 월별 데이터를 취합하여 '2-5. 인원 및 생산성' 장표 형식으로 자동 생성합니다.")
+    
+    # Define Rows (based on image)
+    categories = [
+        "매출액(백만 원)", "전년대비", 
+        "🏠 인원수(명)", "FSE", "K-ISE", "ISE",
+        "👨‍💼 사무직 (소계)", "금형", "사출", "사무직_품질", "사무직_관리", "사무직_개발",
+        "🔧 기능직 (소계)", "볼코팅", "Grill Fan Assy", "Duct Multi", "PP Printing", "AIO Line",
+        "🚪 Door Liner", "Cabinet Cover", "Sealant Line",
+        "🤝 사내도급 (OS)", "📉 퇴직률", "💸 인당 인건비", "💰 인건비율"
+    ]
+    
+    # Define Columns (24 months)
+    cols_24 = [f"24년 {m}월" for m in range(1, 13)]
+    cols_25 = [f"25년 {m}월" for m in range(1, 13)]
+    all_cols = cols_24 + cols_25
+    
+    # Mock Data Generation (For Preview)
+    import numpy as np
+    data = {}
+    for col in all_cols:
+        col_data = []
+        for cat in categories:
+            if "매출액" in cat: col_data.append(f"{np.random.randint(700, 1600):,}")
+            elif "인원수" in cat: col_data.append(np.random.randint(150, 250))
+            elif cat in ["사무직 (소계)", "기능직 (소계)"]: col_data.append("-") # Headers
+            elif "%" in cat or "율" in cat: col_data.append(f"{np.random.uniform(1.0, 15.0):.1f}%")
+            else: col_data.append(np.random.randint(1, 40))
+        data[col] = col_data
+        
+    df_trend = pd.DataFrame(data, index=categories)
+    
+    st.dataframe(df_trend, use_container_width=True, height=600)
+    
+    st.download_button(
+        label="📥 마스터 리포트 엑셀 다운로드 (Mockup)",
+        data=io.BytesIO().getvalue(), # Placeholder
+        file_name="Master_Trend_Report_2025.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
 # --- Main App ---
 def main():
     st.title("💰 Inwon-Checker Pro (CEO Vision Ver.)")
@@ -230,7 +273,10 @@ def main():
         merged_df['DJ2_FTE'] = merged_df['FTE'] * (merged_df['DJ2_Actual'] / merged_df['Total_Actual']).fillna(0)
 
         # --- Presentation ---
-        tab1, tab2, tab3, tab4 = st.tabs(["🌎 통합 (Total)", "🇰🇷 DJ1 법인", "🇻🇳 DJ2 법인", "🛠️ 매칭 상태 (Debug)"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🌎 통합 (Total)", "🇰🇷 DJ1 법인", "🇻🇳 DJ2 법인", "📈 마스터 트렌드 (Preview)", "🛠️ 매칭 상태 (Debug)"])
+
+        with tab4:
+            render_master_trend_report()
 
         def render_integrated_dashboard(df, prefix="Total", tab_id=""):
             to_col = f"{prefix}_TO" if prefix != "Total" else "Total_TO"
