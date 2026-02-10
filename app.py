@@ -112,9 +112,14 @@ def parse_cost_sheet(df):
     """
     Parses Labor Cost from Rows 100-137.
     """
-    # Look for '3. 급여 현황' or specific markers
+    # Dynamically look for start if possible, otherwise use fallback
     start_row = 100
-    end_row = 133
+    for idx, row in df.iterrows():
+        if "급여" in str(row[0]) and "현황" in str(row[0]):
+            start_row = idx + 1
+            break
+            
+    end_row = start_row + 40 # Look at the next 40 rows
     
     cost_data = []
     for i in range(start_row, end_row + 1):
@@ -131,7 +136,11 @@ def parse_cost_sheet(df):
                 "DJ3_Cost": float(row[6]) if pd.notnull(row[6]) else 0, # Col G
                 "Total_Cost": float(row[8]) if pd.notnull(row[8]) else 0 # Col I
             })
-    return pd.DataFrame(cost_data)
+    df_result = pd.DataFrame(cost_data)
+    if df_result.empty:
+        # Return a shell with correct column names to prevent merge KeyErrors
+        return pd.DataFrame(columns=["CostDept", "DJ1_Cost", "DJ2_Cost", "DJ3_Cost", "Total_Cost"])
+    return df_result
 
 def render_master_trend_report():
     st.subheader("📊 24개월 경영 마스터 리포트 (Preview)")
