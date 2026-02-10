@@ -127,24 +127,27 @@ def parse_cost_sheet(df):
         row = df.iloc[i]
         dept_name = str(row[0]).strip() if pd.notnull(row[0]) else ""
         
-        # Look for STL/Basic Pay markers in any of the first few columns
-        row_str = " ".join([str(x) for x in row[:5]])
-        if "STL" in row_str or "기본급" in row_str or "소계" in row_str:
-            try:
-                # Dynamically pick the numeric values from expected columns
-                # We'll stick to 4,5,6,8 but with more validation
-                val_total = float(row[8]) if pd.notnull(row[8]) and str(row[8]).replace('.','').isdigit() else 0
-                if val_total == 0: # Try fallback column if 8 is empty
-                    val_total = float(row[7]) if pd.notnull(row[7]) and str(row[7]).replace('.','').isdigit() else 0
+        # EXTRA LOOSE CHECK
+        try:
+            row_str = " ".join([str(x) for x in row[:5]]) # Define row_str first
+            # Clean numeric string for checking
+            raw_val_8 = str(row[8]).replace(',','').strip() if pd.notnull(row[8]) else "0"
+            if raw_val_8.replace('.','',1).isdigit():
+                val_h = float(raw_val_8)
+            else:
+                val_h = 0
 
+            if val_h > 0 or "STL" in row_str or "기본급" in row_str:
                 cost_data.append({
                     "CostDept": dept_name,
-                    "DJ1_Cost": float(row[4]) if pd.notnull(row[4]) and str(row[4]).replace('.','').isdigit() else 0,
-                    "DJ2_Cost": float(row[5]) if pd.notnull(row[5]) and str(row[5]).replace('.','').isdigit() else 0,
-                    "DJ3_Cost": float(row[6]) if pd.notnull(row[6]) and str(row[6]).replace('.','').isdigit() else 0,
-                    "Total_Cost": val_total
+                    "DJ1_Cost": float(str(row[4]).replace(',','')) if pd.api.types.is_number(row[4]) or (isinstance(row[4], str) and row[4].replace('.','',1).isdigit()) else 0,
+                    "DJ2_Cost": float(str(row[5]).replace(',','')) if pd.api.types.is_number(row[5]) or (isinstance(row[5], str) and row[5].replace('.','',1).isdigit()) else 0,
+                    "DJ3_Cost": float(str(row[6]).replace(',','')) if pd.api.types.is_number(row[6]) or (isinstance(row[6], str) and row[6].replace('.','',1).isdigit()) else 0,
+                    "Total_Cost": val_h
                 })
-            except: continue
+        except Exception as e:
+            # st.error(f"Row {i} error: {e}") # Silent for now
+            continue
 
     df_result = pd.DataFrame(cost_data)
     if df_result.empty:
@@ -527,14 +530,17 @@ def main():
         with tab1: render_integrated_dashboard(merged_df, "Total", "tab1")
         with tab2: render_integrated_dashboard(merged_df, "DJ1", "tab2")
         with tab3: render_integrated_dashboard(merged_df, "DJ2", "tab3")
-        with tab4:
+        with tab5:
             st.subheader("🛠️ 데이터 매칭 점검")
             st.write("DMR 부서명 → 인건비 부서명 매칭 현황입니다.")
             debug_view = h_df[['Major Team', 'Mapped_Dept']].drop_duplicates()
             st.table(debug_view)
             
-            st.subheader("💰 로드된 인건비 원본 (STL)")
+            st.subheader("💰 로드된 인건비 원본 (Parsed)")
             st.dataframe(c_df)
+            
+            st.subheader("📝 인건비 파일 로우 데이터 (상단 150줄)")
+            st.dataframe(raw_cost.head(150))
 
     except Exception as e:
         st.error(f"데이터 연동 중 오류 발생: {e}")
