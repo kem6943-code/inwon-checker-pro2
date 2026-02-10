@@ -110,38 +110,49 @@ def parse_dmr_sheet(df):
 # --- Logic: Cost Parser (For Sheet 2025) ---
 def parse_cost_sheet(df):
     """
-    Parses Labor Cost from Rows 100-137.
+    Ultra-robust parser for Labor Cost.
+    Finds '급여 현황' and extracts rows where Col C is 'STL' or similar.
     """
-    # Dynamically look for start if possible, otherwise use fallback
     start_row = 100
     for idx, row in df.iterrows():
-        if "급여" in str(row[0]) and "현황" in str(row[0]):
+        if any("급여" in str(cell) and "현황" in str(cell) for cell in row[:3]):
             start_row = idx + 1
             break
             
-    end_row = start_row + 40 # Look at the next 40 rows
-    
     cost_data = []
-    for i in range(start_row, end_row + 1):
-        if i >= len(df): break
+    # Peek at columns to find indices for DJ1, DJ2, DJ3, Total
+    # Default: E=4, F=5, G=6, I=8
+    
+    for i in range(start_row, min(len(df), start_row + 50)):
         row = df.iloc[i]
         dept_name = str(row[0]).strip() if pd.notnull(row[0]) else ""
-        cost_type = str(row[2]).strip() if pd.notnull(row[2]) else ""
         
-        if cost_type == "STL": # Focus on STL (Base Salary + Fixed)
-            cost_data.append({
-                "CostDept": dept_name,
-                "DJ1_Cost": float(row[4]) if pd.notnull(row[4]) else 0, # Col E
-                "DJ2_Cost": float(row[5]) if pd.notnull(row[5]) else 0, # Col F
-                "DJ3_Cost": float(row[6]) if pd.notnull(row[6]) else 0, # Col G
-                "Total_Cost": float(row[8]) if pd.notnull(row[8]) else 0 # Col I
-            })
+        # Look for STL/Basic Pay markers in any of the first few columns
+        row_str = " ".join([str(x) for x in row[:5]])
+        if "STL" in row_str or "기본급" in row_str or "소계" in row_str:
+            try:
+                # Dynamically pick the numeric values from expected columns
+                # We'll stick to 4,5,6,8 but with more validation
+                val_total = float(row[8]) if pd.notnull(row[8]) and str(row[8]).replace('.','').isdigit() else 0
+                if val_total == 0: # Try fallback column if 8 is empty
+                    val_total = float(row[7]) if pd.notnull(row[7]) and str(row[7]).replace('.','').isdigit() else 0
+
+                cost_data.append({
+                    "CostDept": dept_name,
+                    "DJ1_Cost": float(row[4]) if pd.notnull(row[4]) and str(row[4]).replace('.','').isdigit() else 0,
+                    "DJ2_Cost": float(row[5]) if pd.notnull(row[5]) and str(row[5]).replace('.','').isdigit() else 0,
+                    "DJ3_Cost": float(row[6]) if pd.notnull(row[6]) and str(row[6]).replace('.','').isdigit() else 0,
+                    "Total_Cost": val_total
+                })
+            except: continue
+
     df_result = pd.DataFrame(cost_data)
     if df_result.empty:
         return pd.DataFrame(columns=["CostDept", "DJ1_Cost", "DJ2_Cost", "DJ3_Cost", "Total_Cost"])
         
-    # Aggregate by CostDept to handle duplicates in cost sheet
+    # Aggregate and Clean
     df_result = df_result.groupby('CostDept', as_index=False).sum()
+    df_result = df_result[df_result['CostDept'] != ""] # Remove empty rows
     return df_result
 
 def get_category_value(df, category, prefix="Total"):
