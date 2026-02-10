@@ -229,7 +229,7 @@ def main():
             st.warning("⚠️ 일일인원현황(DMR) 파일을 업로드해주세요.")
             st.stop()
             
-        raw_dmr = xl_dmr.parse("1123", header=None)
+        raw_dmr = xl_dmr.parse(0, header=None) # Use first sheet regardless of name
         h_df, err = parse_dmr_sheet(raw_dmr)
         
         # Load Cost
@@ -241,7 +241,7 @@ def main():
             st.warning("⚠️ 인건비 자료 파일을 업로드해주세요.")
             st.stop()
             
-        raw_cost = xl_cost.parse("2025", header=None)
+        raw_cost = xl_cost.parse(0, header=None) # Use first sheet regardless of name
         c_df = parse_cost_sheet(raw_cost)
         
         if err:
