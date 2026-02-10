@@ -169,9 +169,16 @@ def render_master_trend_report():
     
     st.dataframe(df_trend, use_container_width=True, height=600)
     
+    # --- Actual Excel Generation ---
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df_trend.to_excel(writer, sheet_name='Master_Trend')
+        # Add basic formatting if needed
+    processed_data = output.getvalue()
+
     st.download_button(
-        label="📥 마스터 리포트 엑셀 다운로드 (Mockup)",
-        data=io.BytesIO().getvalue(), # Placeholder
+        label="📥 마스터 리포트 엑셀 다운로드 (Pre-filled)",
+        data=processed_data,
         file_name="Master_Trend_Report_2025.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
