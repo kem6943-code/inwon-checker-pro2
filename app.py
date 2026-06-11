@@ -43,7 +43,8 @@ def get_mapped_dept(major_name):
 def parse_dmr_sheet(df):
     header_row_idx = -1
     for idx, row in df.iterrows():
-        if '부서 (Team)' in str(row.values):
+        row_str = " ".join([str(val) for val in row.values if pd.notnull(val)])
+        if ('부서' in row_str and 'Team' in row_str) or '부서 (Team)' in row_str or '부서(Team)' in row_str:
             header_row_idx = idx
             break
     
@@ -322,8 +323,19 @@ def main():
             st.warning("⚠️ 일일인원현황(DMR) 파일을 업로드해주세요.")
             st.stop()
             
-        raw_dmr = xl_dmr.parse(0, header=None) # Use first sheet regardless of name
-        h_df, err = parse_dmr_sheet(raw_dmr)
+        raw_dmr = None
+        h_df = None
+        err = "DMR 헤더를 찾을 수 없습니다."
+        for sheet in xl_dmr.sheet_names:
+            try:
+                temp_df = xl_dmr.parse(sheet, header=None)
+                temp_parsed, temp_err = parse_dmr_sheet(temp_df)
+                if not temp_err:
+                    raw_dmr = temp_df
+                    h_df = temp_parsed
+                    err = None
+                    break
+            except: continue
         
         # Load Cost
         if use_default_path and cost_path:
@@ -334,8 +346,20 @@ def main():
             st.warning("⚠️ 인건비 자료 파일을 업로드해주세요.")
             st.stop()
             
-        raw_cost = xl_cost.parse(0, header=None) # Use first sheet regardless of name
-        c_df = parse_cost_sheet(raw_cost)
+        raw_cost = None
+        c_df = None
+        for sheet in xl_cost.sheet_names:
+            try:
+                temp_df = xl_cost.parse(sheet, header=None)
+                temp_parsed = parse_cost_sheet(temp_df)
+                if not temp_parsed.empty:
+                    raw_cost = temp_df
+                    c_df = temp_parsed
+                    break
+            except: continue
+            
+        if c_df is None:
+            c_df = pd.DataFrame(columns=["CostDept", "DJ1_Cost", "DJ2_Cost", "DJ3_Cost", "Total_Cost"])
         
         if err:
             st.error(err)
