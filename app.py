@@ -7,6 +7,16 @@ from datetime import datetime
 import io
 from io import BytesIO
 
+from parsers import (
+    parse_employee_catalog,
+    parse_payroll_file,
+    merge_weekly_to_monthly,
+    calculate_summary_stats,
+    format_mxn,
+    format_krw,
+    MXN_TO_KRW_RATE,
+)
+
 # --- Page Config ---
 st.set_page_config(
     page_title="Inwon-Checker Pro + Cost",
