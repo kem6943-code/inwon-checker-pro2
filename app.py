@@ -509,29 +509,10 @@ def main():
     if entity == "멕시코 법인 🇲🇽":
         st.markdown("""
         <style>
-            [data-testid="stSidebar"] { display: none !important; width: 0 !important; }
-            [data-testid="collapsedControl"] { display: none !important; }
-            header[data-testid="stHeader"] { background-color: transparent !important; }
-            .stDeployButton, [data-testid="stToolbar"] { display: none !important; }
-            .block-container { padding-top: 1.5rem !important; padding-left: 2rem !important; padding-right: 2rem !important; max-width: 100% !important; }
-            
-            [data-testid="column"]:first-child {
-                min-width: 240px !important;
-                max-width: 240px !important;
-                width: 240px !important;
-                flex: 0 0 240px !important;
-                border-right: 1px solid #EAEAEA;
-                padding-right: 16px;
-                margin-right: 24px;
-                height: 100vh;
-                position: sticky;
-                top: 0;
-            }
-            [data-testid="column"]:nth-child(1) {
-                background-color: #FFFFFF !important;
-                border-right: 1px solid #E5E7EB !important;
-                padding: 24px 16px 24px 8px !important;
-            }
+            /* 사이드바 노출 강제 허용 및 최적화 */
+            [data-testid="stSidebar"] { display: block !important; width: 320px !important; }
+            [data-testid="collapsedControl"] { display: block !important; }
+            .block-container { padding-top: 1.5rem !important; }
         </style>
         """, unsafe_allow_html=True)
         
@@ -553,53 +534,13 @@ def main():
             st.error("⚠️ 업로드된 급여대장 파일에서 데이터를 파싱할 수 없습니다. 멕시코 CONTPAQi 급여대장 양식이 맞는지 확인해주세요.")
             return
             
-        col_menu, col_main = st.columns([2, 8])
+        st.sidebar.divider()
+        st.sidebar.header("🏢 부서 선택")
         
-        with col_menu:
-            st.markdown("""
-            <div style='margin-bottom: 32px; padding-left: 8px; display:flex; align-items:center; gap:8px;'>
-                <h2 style='font-size:20px; font-weight:800; color:#1a1a1a; margin:0; letter-spacing: -0.5px;'>동진테크윈</h2>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown("""
-            <div style='color:#1D3557; font-size:15px; font-weight:700; display:flex; align-items:center; gap:12px; padding: 10px 12px; background:#F3F4F6; border-radius:6px; margin-bottom:8px; margin-top:4px;'>
-                사업부별 손익 분석
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if 'mex_selected_dept' not in st.session_state:
-                st.session_state.mex_selected_dept = '전체'
-                
-            def set_mex_dept(dept):
-                st.session_state.mex_selected_dept = dept
-                
-            def mex_nav_btn(label, target):
-                is_active = (st.session_state.mex_selected_dept == target)
-                btn_type = "primary" if is_active else "secondary"
-                st.button(f"{label}", key=f"mex_nav_{target}", on_click=set_mex_dept, args=(target,), type=btn_type, use_container_width=True)
-                
-            mex_nav_btn("전체보기", "전체")
-            st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
-            
-            with st.expander("직접부서 (생산)", expanded=True):
-                mex_nav_btn("사출", "사출")
-                mex_nav_btn("조립", "조립")
-                
-            with st.expander("간접부서 (지원/품질)", expanded=True):
-                mex_nav_btn("품질", "품질")
-                mex_nav_btn("사출유지보수", "사출유지보수")
-                mex_nav_btn("일반유지보수", "일반유지보수")
-                mex_nav_btn("자재/창고", "자재/창고")
-                mex_nav_btn("출하", "출하")
-                
-            with st.expander("경영지원 (관리/인사)", expanded=True):
-                mex_nav_btn("인사", "인사")
-                mex_nav_btn("관리", "관리")
-                
-        with col_main:
-            render_mexico_kpi_dashboard(st.session_state.mex_selected_dept, monthly_df, employee_df)
-            
+        mex_depts = ["전체", "사출", "조립", "품질", "사출유지보수", "일반유지보수", "자재/창고", "출하", "인사", "관리"]
+        selected_dept = st.sidebar.selectbox("대상 부서", mex_depts)
+        
+        render_mexico_kpi_dashboard(selected_dept, monthly_df, employee_df)
         return
         
     # 기존 본사/베트남 모드
