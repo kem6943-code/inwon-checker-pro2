@@ -272,6 +272,64 @@ def render_master_trend_report(current_df=None, target_month=None, history_files
 # 🇲🇽 멕시코 법인 전용 헬퍼 및 렌더링 함수
 # ===================================================================
 
+@st.fragment
+def render_date_picker(valid_yms):
+    if not valid_yms: return
+    
+    if 'start_ym' not in st.session_state: st.session_state.start_ym = valid_yms[0]
+    if 'end_ym' not in st.session_state: st.session_state.end_ym = valid_yms[-1]
+    
+    if 'temp_start_ym' not in st.session_state: st.session_state.temp_start_ym = st.session_state.start_ym
+    if 'temp_end_ym' not in st.session_state: st.session_state.temp_end_ym = str(st.session_state.end_ym)
+    if 'picker_view_year' not in st.session_state: 
+        safe_ym = str(st.session_state.end_ym)
+        st.session_state.picker_view_year = int(safe_ym.split('-')[0]) if '-' in safe_ym else 2026
+
+    btn_label = f"📅 {st.session_state.start_ym.replace('-','.')} ~ {st.session_state.end_ym.replace('-','.')}" if st.session_state.start_ym != st.session_state.end_ym else f"📅 {st.session_state.start_ym.replace('-','.')}"
+    
+    with st.popover(btn_label, use_container_width=True):
+        c1, c2, c3 = st.columns([1, 2, 1])
+        if c1.button("❮", key="pd_prev", use_container_width=True):
+            st.session_state.picker_view_year -= 1
+            st.rerun(scope="fragment")
+        c2.markdown(f"<div style='text-align:center; font-weight:700; font-size:16px; padding-top:6px;'>{st.session_state.picker_view_year}년</div>", unsafe_allow_html=True)
+        if c3.button("❯", key="pd_next", use_container_width=True):
+            st.session_state.picker_view_year += 1
+            st.rerun(scope="fragment")
+            
+        st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
+        
+        for r in range(3):
+            cols = st.columns(4)
+            for c in range(4):
+                m = r * 4 + c + 1
+                ym = f"{st.session_state.picker_view_year}-{m:02d}"
+                
+                is_start = (ym == st.session_state.temp_start_ym)
+                is_end = (ym == st.session_state.temp_end_ym)
+                btn_type = "primary" if (is_start or is_end) else "secondary"
+                
+                if cols[c].button(f"{m}월", key=f"btn_{ym}", type=btn_type, use_container_width=True):
+                    if st.session_state.temp_start_ym and st.session_state.temp_end_ym:
+                        st.session_state.temp_start_ym = ym
+                        st.session_state.temp_end_ym = None
+                    elif st.session_state.temp_start_ym and not st.session_state.temp_end_ym:
+                        if ym >= st.session_state.temp_start_ym:
+                            st.session_state.temp_end_ym = ym
+                        else:
+                            st.session_state.temp_end_ym = st.session_state.temp_start_ym
+                            st.session_state.temp_start_ym = ym
+                    else:
+                        st.session_state.temp_start_ym = ym
+                    st.rerun(scope="fragment")
+                    
+        st.markdown("<hr style='margin: 10px 0;'>", unsafe_allow_html=True)
+        if st.button("선택 적용", type="primary", use_container_width=True):
+            if st.session_state.temp_start_ym:
+                st.session_state.start_ym = st.session_state.temp_start_ym
+                st.session_state.end_ym = st.session_state.temp_end_ym if st.session_state.temp_end_ym else st.session_state.temp_start_ym
+            st.rerun()
+
 def load_uploaded_payroll_files(uploaded_files):
     result = {'주급': [], '격주급': [], '월급': []}
     for ufile in uploaded_files:
