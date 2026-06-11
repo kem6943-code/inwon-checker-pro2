@@ -558,6 +558,34 @@ def render_mexico_kpi_dashboard(dept_name, monthly_df_full, employee_df_full):
                 tr_html += f"<tr>{tds}</tr>"
                 
             table_html = f"""
+            <style>
+                .custom-table-wrapper {{
+                    width: 100%;
+                    overflow-x: auto;
+                    margin-top: 10px;
+                    margin-bottom: 20px;
+                }}
+                .custom-table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 14px;
+                    text-align: left;
+                    font-family: inherit;
+                }}
+                .custom-table th, .custom-table td {{
+                    padding: 14px 16px;
+                    border-bottom: 1px solid #EAEAEA;
+                    color: #262626;
+                }}
+                .custom-table th {{
+                    background-color: #F7F9FC;
+                    font-weight: 700;
+                    color: #1D3557;
+                }}
+                .custom-table tr:hover {{
+                    background-color: #FAFAFA;
+                }}
+            </style>
             <div class="custom-table-wrapper">
                 <table class="custom-table">
                     <thead><tr>{th_html}</tr></thead>
