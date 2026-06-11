@@ -599,10 +599,6 @@ def main():
         payroll_data = load_uploaded_payroll_files(mex_payroll_files)
         monthly_df = merge_weekly_to_monthly(payroll_data)
         
-        # 🚨 비즈니스 긴급 패치: 멕시코 4월 인건비 캡처용 YearMonth 강제 고정
-        if not monthly_df.empty:
-            monthly_df['YearMonth'] = '2026-04'
-        
         if monthly_df.empty:
             st.error("⚠️ 업로드된 급여대장 파일에서 데이터를 파싱할 수 없습니다. 멕시코 CONTPAQi 급여대장 양식이 맞는지 확인해주세요.")
             return
